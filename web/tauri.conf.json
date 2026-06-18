@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ACC Pitwall Overlay",
+  "version": "0.1.0",
+  "identifier": "co.za.beerr.pitwall.overlay",
+  "build": {
+    "frontendDist": "../web/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "overlay",
+        "url": "index.html?overlay=1&url=ws://YOUR_RELAY:8765/ws&room=team-spa-6h&name=overlay",
+        "title": "ACC Pitwall Overlay",
+        "width": 280,
+        "height": 150,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "shadow": false,
+        "skipTaskbar": true,
+        "resizable": true
+      }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": { "active": true, "targets": "all" }
+}
