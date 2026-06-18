@@ -8,7 +8,7 @@ import type { Standing } from "../types";
  */
 
 // A smooth closed loop (rough Spa-ish silhouette) as a periodic parametric curve.
-function pointAt(p: number): { x: number; y: number } {
+export function pointAt(p: number): { x: number; y: number } {
   const a = p * Math.PI * 2;
   // Sum of a few harmonics → an irregular, circuit-like loop inside a 100x100 box.
   const x = 50 + 34 * Math.cos(a) + 6 * Math.cos(2 * a + 0.6) - 4 * Math.cos(3 * a);
@@ -16,7 +16,7 @@ function pointAt(p: number): { x: number; y: number } {
   return { x, y };
 }
 
-function ribbonPath(): string {
+export function ribbonPath(): string {
   const pts: string[] = [];
   for (let i = 0; i <= 120; i++) {
     const { x, y } = pointAt(i / 120);

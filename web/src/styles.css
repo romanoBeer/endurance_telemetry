@@ -215,6 +215,17 @@ body:has(.overlay) { background: transparent; }
 
 /* weather */
 .weather-tab { display: grid; gap: 12px; }
+.radar-panel .panel-title { display: flex; justify-content: space-between; align-items: baseline; }
+.radar-tag { font-size: 12px; font-weight: 700; color: var(--cold); }
+.radar-map { width: 100%; height: auto; aspect-ratio: 1; max-width: 460px; margin: 0 auto; display: block; background: #06090d; border-radius: 10px; }
+.radar-bg { fill: #06090d; }
+.radar-ring { fill: none; stroke: var(--line); stroke-width: 0.4; opacity: 0.5; }
+.radar-ribbon { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-linejoin: round; opacity: 0.85; }
+.radar-car { fill: var(--accent); stroke: var(--bg); stroke-width: 0.6; }
+.radar-wind line { stroke: var(--warm); stroke-width: 1.2; }
+.radar-wind circle { fill: var(--warm); }
+.radar-n { fill: var(--muted); font-size: 4px; text-anchor: middle; font-weight: 700; }
+.radar-foot { text-align: center; margin-top: 6px; }
 .fc-grid { display: flex; gap: 10px; }
 .fc-slot { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .fc-time { font-size: 12px; font-weight: 700; }
