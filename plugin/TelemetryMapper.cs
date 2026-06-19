@@ -40,7 +40,7 @@ namespace EnduranceTelemetry
             t.Position = d.Position;
             t.AirTemp = d.AirTemperature;
             t.RoadTemp = d.RoadTemperature;
-            t.TrackPos = d.TrackPositionPercent ?? 0.0;
+            t.TrackPos = d.TrackPositionPercent;
             t.CarModel = d.CarModel ?? "";
             t.Track = d.TrackName ?? "";
             t.PlayerNick = d.PlayerName ?? "";
@@ -101,7 +101,10 @@ namespace EnduranceTelemetry
             object stat = Get(raw, "StaticInfo");
             if (phys == null && gfx == null) return; // not an ACC-style payload
 
-            t.TyreWear = Floats(Get(phys, "tyreWear"), 4, t.TyreWear);
+            // ACC tyreWear is 0.0–1.0 remaining; convert to 0–100% for display.
+            var rawWear = Floats(Get(phys, "tyreWear"), 4, null);
+            if (rawWear != null)
+                t.TyreWear = new[] { rawWear[0] * 100, rawWear[1] * 100, rawWear[2] * 100, rawWear[3] * 100 };
             t.PadLife = Floats(Get(phys, "padLife"), 4, t.PadLife);
             t.DiscLife = Floats(Get(phys, "discLife"), 4, t.DiscLife);
             t.CarDamage = Floats(Get(phys, "carDamage"), 5, t.CarDamage);
@@ -123,6 +126,10 @@ namespace EnduranceTelemetry
             t.FuelEstimatedLaps = ToD(Get(gfx, "fuelEstimatedLaps"));
             if (t.TrackPos == 0.0) t.TrackPos = ToD(Get(gfx, "normalizedCarPosition"));
 
+            // Sector times (ACC graphics: lastSectorTime / bestSectorTime are int[3] in ms).
+            t.LastSectors = Ints(Get(gfx, "lastSectorTime"), 3, t.LastSectors);
+            t.BestSectors = Ints(Get(gfx, "bestSectorTime"), 3, t.BestSectors);
+
             t.Electronics = new Electronics
             {
                 Tc = ToI(Get(gfx, "tc")),
@@ -130,6 +137,8 @@ namespace EnduranceTelemetry
                 Abs = ToI(Get(gfx, "abs")),
                 Map = ToI(Get(gfx, "engineMap")),
                 Bb = t.BrakeBias,
+                FArb = 0,
+                RArb = 0,
             };
 
             // Synthesize a short forecast curve from the three ACC rain points so
@@ -176,6 +185,15 @@ namespace EnduranceTelemetry
             var outv = new double[n];
             int i = 0;
             foreach (var x in e) { if (i >= n) break; outv[i++] = ToD(x); }
+            return i == 0 ? fallback : outv;
+        }
+
+        private static int[] Ints(object arr, int n, int[] fallback)
+        {
+            if (!(arr is IEnumerable e)) return fallback;
+            var outv = new int[n];
+            int i = 0;
+            foreach (var x in e) { if (i >= n) break; outv[i++] = ToI(x); }
             return i == 0 ? fallback : outv;
         }
 

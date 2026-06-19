@@ -22,6 +22,7 @@
     <UseWPF>true</UseWPF>
     <LangVersion>latest</LangVersion>
     <Platforms>x64</Platforms>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <SimHubDir Condition="'$(SimHubDir)' == ''">C:\Program Files (x86)\SimHub</SimHubDir>
     <CopyToSimHub Condition="'$(CopyToSimHub)' == ''">true</CopyToSimHub>
@@ -39,6 +40,10 @@
     </Reference>
     <Reference Include="ACSharedMemory">
       <HintPath>$(SimHubDir)\ACSharedMemory.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SimHub.Logging">
+      <HintPath>$(SimHubDir)\SimHub.Logging.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="log4net">
@@ -64,7 +69,7 @@
 
   <Target Name="DeployToSimHub" AfterTargets="Build" Condition="'$(CopyToSimHub)' == 'true'">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SimHubDir)" SkipUnchangedFiles="false" />
-    <Copy SourceFiles="$(OutputPath)control.html" DestinationFolder="$(SimHubDir)\PluginsData\EnduranceTelemetry" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="$(OutputPath)web\control.html" DestinationFolder="$(SimHubDir)\PluginsData\EnduranceTelemetry" SkipUnchangedFiles="false" />
   </Target>
 
 </Project>

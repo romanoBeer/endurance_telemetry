@@ -5,107 +5,665 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Endurance Pitwall — Engineer</title>
 <style>
-  :root { --bg:#0b0e14; --panel:#141925; --line:#222b3a; --txt:#e6edf3; --dim:#8b97a7; --accent:#3ddc97; --warn:#ffb74d; }
-  * { box-sizing:border-box; }
-  body { margin:0; font:15px/1.4 -apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--txt); }
-  header { padding:14px 16px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
-  header b { font-size:16px; } header span { color:var(--dim); font-size:12px; }
-  .wrap { padding:16px; max-width:520px; margin:0 auto; }
-  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
-  .card .k { color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
-  .card .v { font-size:26px; font-weight:600; margin-top:2px; }
-  .card .u { color:var(--dim); font-size:13px; font-weight:400; }
-  h2 { font-size:13px; color:var(--dim); text-transform:uppercase; letter-spacing:.05em; margin:22px 0 10px; }
-  label { display:flex; justify-content:space-between; align-items:center; margin:10px 0; gap:12px; }
-  input[type=number] { width:100px; background:#0d1119; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:8px; font-size:15px; text-align:right; }
-  .row4 { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-  .row4 input { width:100%; }
-  .toggle { display:flex; align-items:center; gap:8px; }
-  button { width:100%; margin-top:16px; padding:14px; border:0; border-radius:12px; background:var(--accent); color:#06281c; font-size:16px; font-weight:700; }
-  button:active { filter:brightness(.9); }
-  .ack { text-align:center; margin-top:12px; min-height:18px; font-size:14px; }
-  .ok { color:var(--accent); } .no { color:var(--warn); }
-  .off { opacity:.4; }
+  :root{--bg:#0b0e14;--panel:#141925;--line:#222b3a;--txt:#e6edf3;--dim:#8b97a7;--accent:#3ddc97;--warn:#ffb74d;--red:#f44;--purple:#c084fc;--blue:#60a5fa;--yellow:#fbbf24;--cyan:#22d3ee}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font:13px/1.35 'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);overflow-x:hidden}
+  header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  header b{font-size:15px} header .meta{color:var(--dim);font-size:11px;text-align:right}
+  header .meta .driver{color:var(--accent);font-size:12px;font-weight:600}
+
+  /* Tabs */
+  .tabs{display:flex;border-bottom:1px solid var(--line);background:#0d1119}
+  .tabs button{flex:1;padding:10px 0;border:0;background:0;color:var(--dim);font:600 13px/1 inherit;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+  .tabs button.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .tabs button:hover{color:var(--txt)}
+  .tab-content{display:none;padding:12px}
+  .tab-content.active{display:block}
+
+  /* Shared card/grid */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .card .k{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+  .card .v{font-size:22px;font-weight:700;margin-top:2px}
+  .card .v.sm{font-size:16px}
+  .u{color:var(--dim);font-size:11px;font-weight:400}
+  h2{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px;padding:0 2px}
+  h2:first-child{margin-top:4px}
+
+  /* Leaderboard */
+  .lb{width:100%;border-collapse:collapse;font-size:11px}
+  .lb th{color:var(--dim);font-size:10px;text-transform:uppercase;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg)}
+  .lb td{padding:4px 6px;border-bottom:1px solid #1a2030;white-space:nowrap}
+  .lb tr.player{background:#1a2a20}
+  .lb tr.inpit td:first-child{border-left:2px solid var(--warn)}
+  .lb .pos{font-weight:700;width:24px;text-align:center}
+  .lb .name{max-width:120px;overflow:hidden;text-overflow:ellipsis}
+  .lb .gap{color:var(--dim)}
+  .lb .fast{color:var(--purple)}
+  .lb .time{font-family:'Consolas','Courier New',monospace;font-size:11px}
+
+  /* Lap time display */
+  .laptimes .v{font-family:'Consolas','Courier New',monospace}
+  .laptime-best{color:var(--purple)}
+  .laptime-last{color:var(--accent)}
+  .laptime-est{color:var(--yellow)}
+
+  /* Tyre/Brake visual */
+  .tyre-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:320px;margin:0 auto}
+  .tyre-box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
+  .tyre-box .corner{font-size:10px;color:var(--dim);font-weight:700;margin-bottom:4px}
+  .tyre-box .press{font-size:20px;font-weight:700;font-family:'Consolas',monospace}
+  .tyre-box .temp{font-size:14px;color:var(--warn);margin-top:2px}
+  .tyre-box .wear{font-size:11px;margin-top:2px}
+  .wear-bar{height:4px;background:#333;border-radius:2px;margin-top:3px;overflow:hidden}
+  .wear-bar div{height:100%;border-radius:2px;transition:width .3s}
+
+  /* Vehicle settings */
+  .settings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px}
+  .setting{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;text-align:center}
+  .setting .k{font-size:9px;color:var(--dim);text-transform:uppercase}
+  .setting .v{font-size:18px;font-weight:700;margin-top:1px}
+
+  /* Sectors */
+  .sectors{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px}
+  .sector{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px;text-align:center}
+  .sector .k{font-size:9px;color:var(--dim)}
+  .sector .v{font-size:14px;font-weight:600;font-family:'Consolas',monospace;margin-top:1px}
+
+  /* Weather */
+  .forecast-table{width:100%;border-collapse:collapse;font-size:12px}
+  .forecast-table th{color:var(--dim);font-size:10px;text-transform:uppercase;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+  .forecast-table td{padding:6px 8px;border-bottom:1px solid #1a2030}
+  .rain-bar{display:inline-block;height:14px;background:var(--blue);border-radius:3px;vertical-align:middle;min-width:2px;transition:width .3s}
+  .rain-high{background:var(--red)}
+  .grip-indicator{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+
+  /* Wind indicator */
+  .wind-arrow{display:inline-block;transition:transform .3s}
+
+  /* Pit strategy */
+  .pit-section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px}
+  .pit-section h3{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px}
+  .pit-pos-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center}
+  .pit-pos-grid .v{font-size:24px;font-weight:700}
+  .pit-pos-grid .k{font-size:10px;color:var(--dim);margin-top:2px}
+  label{display:flex;justify-content:space-between;align-items:center;margin:8px 0;gap:12px;font-size:13px}
+  input[type=number]{width:90px;background:#0d1119;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:7px;font-size:14px;text-align:right}
+  .row4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .row4 input{width:100%}
+  .row4 .corner-label{font-size:9px;color:var(--dim);text-align:center;margin-bottom:2px}
+  button.send{width:100%;margin-top:14px;padding:12px;border:0;border-radius:10px;background:var(--accent);color:#06281c;font-size:15px;font-weight:700;cursor:pointer}
+  button.send:active{filter:brightness(.85)}
+  .ack{text-align:center;margin-top:10px;min-height:16px;font-size:13px}
+  .ok{color:var(--accent)} .no{color:var(--warn)}
+
+  /* Scrollable leaderboard */
+  .lb-wrap{max-height:45vh;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
+  .lb-wrap::-webkit-scrollbar{width:4px}
+  .lb-wrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+
+  /* Status bar */
+  .status-bar{display:flex;gap:12px;padding:6px 12px;background:#0d1119;border-bottom:1px solid var(--line);font-size:11px;color:var(--dim);overflow-x:auto;white-space:nowrap}
+  .status-bar .item{display:flex;align-items:center;gap:4px}
+  .status-bar .val{color:var(--txt);font-weight:600}
+  .conn-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+  .conn-dot.on{background:var(--accent)}
+  .conn-dot.off{background:var(--red)}
 </style>
 </head>
 <body>
-<header><b>Endurance Pitwall</b><span id="conn">connecting…</span></header>
-<div class="wrap">
-  <div class="grid">
-    <div class="card"><div class="k">Fuel to add</div><div class="v" id="fuelToAdd">–<span class="u"> L</span></div></div>
-    <div class="card"><div class="k">Laps in tank</div><div class="v" id="lapsInTank">–</div></div>
-    <div class="card"><div class="k">Avg fuel/lap</div><div class="v" id="avgFuel">–<span class="u"> L</span></div></div>
-    <div class="card"><div class="k">Laps left</div><div class="v" id="lapsLeft">–</div></div>
-    <div class="card"><div class="k">Position</div><div class="v" id="pos">–</div></div>
-    <div class="card"><div class="k">Fuel</div><div class="v" id="fuel">–<span class="u"> L</span></div></div>
+
+<header>
+  <b>Endurance Pitwall</b>
+  <div class="meta">
+    <div class="driver" id="driverName">–</div>
+    <div><span class="conn-dot off" id="connDot"></span> <span id="conn">connecting...</span></div>
+  </div>
+</header>
+
+<div class="status-bar">
+  <div class="item">LAP <span class="val" id="sbLap">–</span></div>
+  <div class="item">POS <span class="val" id="sbPos">–</span></div>
+  <div class="item">TIME LEFT <span class="val" id="sbTime">–</span></div>
+  <div class="item">FUEL <span class="val" id="sbFuel">–</span></div>
+  <div class="item">TRACK <span class="val" id="sbTrack">–</span></div>
+</div>
+
+<div class="tabs">
+  <button class="active" data-tab="home">Home</button>
+  <button data-tab="weather">Weather</button>
+  <button data-tab="pit">Pit Strategy</button>
+</div>
+
+<!-- ═══════════════════════ HOME TAB ═══════════════════════ -->
+<div class="tab-content active" id="tab-home">
+
+  <h2>Lap Times</h2>
+  <div class="grid3 laptimes">
+    <div class="card"><div class="k">Last Lap</div><div class="v sm laptime-last" id="lastLap">–</div></div>
+    <div class="card"><div class="k">Best Lap</div><div class="v sm laptime-best" id="bestLap">–</div></div>
+    <div class="card"><div class="k">Est. Lap</div><div class="v sm laptime-est" id="estLap">–</div></div>
   </div>
 
-  <h2>Push pit strategy</h2>
-  <label>Fuel to add (L)
-    <input type="number" id="inFuel" step="0.5" min="0" value="0" />
-  </label>
-  <label>Change tyres
-    <span class="toggle"><input type="checkbox" id="inTyres" checked /></span>
-  </label>
-  <label>Tyre set
-    <input type="number" id="inSet" step="1" min="1" value="1" />
-  </label>
-  <div>Pressures (FL FR RL RR, psi)</div>
-  <div class="row4">
-    <input type="number" id="p0" step="0.1" value="27.4" />
-    <input type="number" id="p1" step="0.1" value="27.4" />
-    <input type="number" id="p2" step="0.1" value="27.1" />
-    <input type="number" id="p3" step="0.1" value="27.1" />
+  <div class="sectors" id="sectors">
+    <div class="sector"><div class="k">S1</div><div class="v" id="s1">–</div></div>
+    <div class="sector"><div class="k">S2</div><div class="v" id="s2">–</div></div>
+    <div class="sector"><div class="k">S3</div><div class="v" id="s3">–</div></div>
   </div>
-  <button id="send">Send to driver</button>
-  <div class="ack" id="ack"></div>
+
+  <h2>Fuel</h2>
+  <div class="grid4">
+    <div class="card"><div class="k">Fuel</div><div class="v sm" id="fuel">–<span class="u">L</span></div></div>
+    <div class="card"><div class="k">Avg/Lap</div><div class="v sm" id="avgFuel">–<span class="u">L</span></div></div>
+    <div class="card"><div class="k">Laps Left</div><div class="v sm" id="lapsInTank">–</div></div>
+    <div class="card"><div class="k">To Add</div><div class="v sm" style="color:var(--accent)" id="fuelToAdd">–<span class="u">L</span></div></div>
+  </div>
+
+  <h2>Vehicle Settings</h2>
+  <div class="settings-grid" id="vehSettings">
+    <div class="setting"><div class="k">TC</div><div class="v" id="tc">–</div></div>
+    <div class="setting"><div class="k">TC Cut</div><div class="v" id="tccut">–</div></div>
+    <div class="setting"><div class="k">ABS</div><div class="v" id="abs">–</div></div>
+    <div class="setting"><div class="k">BB</div><div class="v" id="bb">–</div></div>
+    <div class="setting" id="mapBox"><div class="k">MAP</div><div class="v" id="map">–</div></div>
+  </div>
+
+  <h2>Tyres / Brakes</h2>
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px">
+    <span class="u" style="font-size:12px">Compound: <strong id="tyreCompound" style="color:var(--txt)">–</strong></span>
+    <span class="u" style="font-size:12px">Set age: <strong id="tyreAge" style="color:var(--txt)">–</strong> laps</span>
+  </div>
+  <div class="tyre-grid" id="tyreGrid">
+    <div class="tyre-box" id="tFL">
+      <div class="corner">FL</div>
+      <div class="press" id="pFL">–</div>
+      <div class="temp" id="tpFL">–°C</div>
+      <div class="wear"><span id="wFL">–</span>%</div>
+      <div class="wear-bar"><div id="wbFL" style="width:100%;background:var(--accent)"></div></div>
+      <div class="u" style="margin-top:3px">Brake <span id="bFL">–</span>°C</div>
+    </div>
+    <div class="tyre-box" id="tFR">
+      <div class="corner">FR</div>
+      <div class="press" id="pFR">–</div>
+      <div class="temp" id="tpFR">–°C</div>
+      <div class="wear"><span id="wFR">–</span>%</div>
+      <div class="wear-bar"><div id="wbFR" style="width:100%;background:var(--accent)"></div></div>
+      <div class="u" style="margin-top:3px">Brake <span id="bFR">–</span>°C</div>
+    </div>
+    <div class="tyre-box" id="tRL">
+      <div class="corner">RL</div>
+      <div class="press" id="pRL">–</div>
+      <div class="temp" id="tpRL">–°C</div>
+      <div class="wear"><span id="wRL">–</span>%</div>
+      <div class="wear-bar"><div id="wbRL" style="width:100%;background:var(--accent)"></div></div>
+      <div class="u" style="margin-top:3px">Brake <span id="bRL">–</span>°C</div>
+    </div>
+    <div class="tyre-box" id="tRR">
+      <div class="corner">RR</div>
+      <div class="press" id="pRR">–</div>
+      <div class="temp" id="tpRR">–°C</div>
+      <div class="wear"><span id="wRR">–</span>%</div>
+      <div class="wear-bar"><div id="wbRR" style="width:100%;background:var(--accent)"></div></div>
+      <div class="u" style="margin-top:3px">Brake <span id="bRR">–</span>°C</div>
+    </div>
+  </div>
+
+  <h2>Class Leaderboard</h2>
+  <div class="lb-wrap">
+    <table class="lb">
+      <thead><tr>
+        <th>P</th><th>Driver</th><th>Gap</th><th>Int</th><th>Last</th><th>Best</th><th>Laps</th><th>Pit</th>
+      </tr></thead>
+      <tbody id="lbBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════ WEATHER TAB ═══════════════════════ -->
+<div class="tab-content" id="tab-weather">
+
+  <h2>Current Conditions</h2>
+  <div class="grid3">
+    <div class="card"><div class="k">Air Temp</div><div class="v sm" id="wxAir">–<span class="u">°C</span></div></div>
+    <div class="card"><div class="k">Track Temp</div><div class="v sm" id="wxTrack">–<span class="u">°C</span></div></div>
+    <div class="card"><div class="k">Rain Now</div><div class="v sm" id="wxRain">–</div></div>
+  </div>
+  <div class="grid3" style="margin-top:8px">
+    <div class="card"><div class="k">Wind</div><div class="v sm" id="wxWind">–<span class="u">m/s</span></div></div>
+    <div class="card"><div class="k">Wind Dir</div><div class="v sm"><span class="wind-arrow" id="wxWindDir">↑</span> <span id="wxWindDeg">–°</span></div></div>
+    <div class="card"><div class="k">Grip</div><div class="v sm" id="wxGrip">–</div></div>
+  </div>
+
+  <h2>Rain Prediction</h2>
+  <div class="grid3" style="margin-bottom:12px">
+    <div class="card"><div class="k">Now</div><div class="v sm" id="rainNow" style="color:var(--blue)">–</div></div>
+    <div class="card"><div class="k">In 10 min</div><div class="v sm" id="rain10" style="color:var(--blue)">–</div></div>
+    <div class="card"><div class="k">In 30 min</div><div class="v sm" id="rain30" style="color:var(--blue)">–</div></div>
+  </div>
+
+  <h2>Forecast</h2>
+  <div style="border:1px solid var(--line);border-radius:8px;overflow:hidden">
+    <table class="forecast-table">
+      <thead><tr><th>Time</th><th>Rain</th><th>Air</th><th>Track</th><th>Grip</th></tr></thead>
+      <tbody id="fcBody"><tr><td colspan="5" style="text-align:center;color:var(--dim)">No forecast data</td></tr></tbody>
+    </table>
+  </div>
+
+  <h2>Rain Radar</h2>
+  <div class="card" style="text-align:center;padding:16px">
+    <canvas id="radarCanvas" width="300" height="160" style="width:100%;max-width:300px;height:auto"></canvas>
+    <div class="u" style="margin-top:6px">Rain intensity over time (sim forecast)</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ PIT STRATEGY TAB ═══════════════════════ -->
+<div class="tab-content" id="tab-pit">
+
+  <div class="pit-section">
+    <h3>Pit Window</h3>
+    <div class="pit-pos-grid">
+      <div><div class="v" id="pitPosOut">–</div><div class="k">Est. out position</div></div>
+      <div><div class="v" id="pitLapsInTank">–</div><div class="k">Laps in tank</div></div>
+      <div><div class="v" id="pitLapsLeft">–</div><div class="k">Laps remaining</div></div>
+    </div>
+  </div>
+
+  <div class="pit-section">
+    <h3>Tyre Condition</h3>
+    <div style="text-align:center;margin-bottom:10px">
+      <span class="u">Compound: <strong id="pitCompound" style="color:var(--txt)">–</strong></span>
+      &nbsp;&nbsp;
+      <span class="u">Age: <strong id="pitTyreAge" style="color:var(--txt)">–</strong> laps</span>
+    </div>
+    <div class="grid4" style="text-align:center">
+      <div class="card">
+        <div class="k">FL</div>
+        <div class="v sm" id="pitWFL">–<span class="u">%</span></div>
+        <div class="wear-bar"><div id="pitWbFL" style="width:100%;background:var(--accent)"></div></div>
+      </div>
+      <div class="card">
+        <div class="k">FR</div>
+        <div class="v sm" id="pitWFR">–<span class="u">%</span></div>
+        <div class="wear-bar"><div id="pitWbFR" style="width:100%;background:var(--accent)"></div></div>
+      </div>
+      <div class="card">
+        <div class="k">RL</div>
+        <div class="v sm" id="pitWRL">–<span class="u">%</span></div>
+        <div class="wear-bar"><div id="pitWbRL" style="width:100%;background:var(--accent)"></div></div>
+      </div>
+      <div class="card">
+        <div class="k">RR</div>
+        <div class="v sm" id="pitWRR">–<span class="u">%</span></div>
+        <div class="wear-bar"><div id="pitWbRR" style="width:100%;background:var(--accent)"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pit-section">
+    <h3>Fuel Strategy</h3>
+    <div class="grid2" style="margin-bottom:10px">
+      <div class="card"><div class="k">Fuel to Finish</div><div class="v sm" id="pitFuelFinish">–<span class="u">L</span></div></div>
+      <div class="card"><div class="k">Recommended Add</div><div class="v sm" style="color:var(--accent)" id="pitFuelAdd">–<span class="u">L</span></div></div>
+    </div>
+  </div>
+
+  <div class="pit-section">
+    <h3>Send Pit Command</h3>
+    <label>Fuel to add (L)
+      <input type="number" id="inFuel" step="0.5" min="0" value="0" />
+    </label>
+    <label>Change tyres
+      <span><input type="checkbox" id="inTyres" checked /></span>
+    </label>
+    <label>Tyre set
+      <input type="number" id="inSet" step="1" min="1" value="1" />
+    </label>
+    <div style="margin:8px 0 4px;font-size:12px;color:var(--dim)">Pressures (psi)</div>
+    <div class="row4">
+      <div><div class="corner-label">FL</div><input type="number" id="p0" step="0.1" value="27.4" /></div>
+      <div><div class="corner-label">FR</div><input type="number" id="p1" step="0.1" value="27.4" /></div>
+      <div><div class="corner-label">RL</div><input type="number" id="p2" step="0.1" value="27.1" /></div>
+      <div><div class="corner-label">RR</div><input type="number" id="p3" step="0.1" value="27.1" /></div>
+    </div>
+    <button class="send" id="send">Send to Driver</button>
+    <div class="ack" id="ack"></div>
+  </div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-const f1 = n => (n == null ? "–" : Number(n).toFixed(1));
+const f1 = n => (n == null || isNaN(n)) ? "–" : Number(n).toFixed(1);
+const f0 = n => (n == null || isNaN(n)) ? "–" : Math.round(n);
+
+function msToLap(ms) {
+  if (!ms || ms <= 0) return "–";
+  const s = ms / 1000;
+  const m = Math.floor(s / 60);
+  const sec = (s % 60).toFixed(3);
+  return m + ":" + (sec < 10 ? "0" : "") + sec;
+}
+
+function secToTime(sec) {
+  if (sec == null || sec <= 0 || sec > 360000) return "–";
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  return (h > 0 ? h + ":" : "") + String(m).padStart(h > 0 ? 2 : 1, "0") + ":" + String(s).padStart(2, "0");
+}
+
+const RAIN_LABELS = ["None", "Drizzle", "Light", "Medium", "Heavy", "Storm"];
+function rainText(v) { return RAIN_LABELS[v] || (v != null ? "Lvl " + v : "–"); }
+
+const GRIP_LABELS = ["Flooded", "Wet", "Damp", "Greasy", "Dry", "Fast", "Optimum"];
+function gripText(v) { return GRIP_LABELS[v] || (v != null ? "Lvl " + v : "–"); }
+function gripColor(v) {
+  if (v == null) return "#8b97a7";
+  if (v <= 1) return "#60a5fa";
+  if (v <= 3) return "#fbbf24";
+  return "#3ddc97";
+}
+
+function wearColor(pct) {
+  if (pct > 60) return "var(--accent)";
+  if (pct > 30) return "var(--yellow)";
+  return "var(--red)";
+}
+
+// Tabs
+document.querySelectorAll(".tabs button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+    btn.classList.add("active");
+    $("tab-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+// Pit position estimate: count how many cars are within one pit-stop gap ahead
+function estimatePitPosition(t) {
+  if (!t.standings || !t.standings.length) return "–";
+  const player = t.standings.find(s => s.isPlayer);
+  if (!player) return t.position || "–";
+  const pitTimeSec = 25;
+  const pitTimeMs = pitTimeSec * 1000;
+  let pos = player.position;
+  for (const s of t.standings) {
+    if (s.isPlayer) continue;
+    if (s.position > player.position) {
+      const gapBehind = Math.abs(s.gapToLeaderMs - player.gapToLeaderMs);
+      if (gapBehind < pitTimeMs) pos++;
+    }
+  }
+  return Math.min(pos, t.standings.length);
+}
+
+let lastT = {}, lastS = {}, lastDriver = "";
 
 async function poll() {
   try {
     const r = await fetch("/telemetry", { cache: "no-store" });
     const d = await r.json();
-    const t = d.telemetry || {}, s = d.strategy || {};
-    $("conn").textContent = t.connected ? (t.game || "live") : "no telemetry";
-    $("conn").className = t.connected ? "ok" : "no";
-    $("fuelToAdd").innerHTML = f1(s.fuelToAdd) + '<span class="u"> L</span>';
+    const t = d.telemetry || {};
+    const s = d.strategy || {};
+    lastT = t; lastS = s; lastDriver = d.driver || "";
+
+    // Connection
+    const live = !!t.connected;
+    $("connDot").className = "conn-dot " + (live ? "on" : "off");
+    $("conn").textContent = live ? (t.game || "live") : "no telemetry";
+    $("driverName").textContent = d.driver || t.playerNick || "–";
+
+    // Status bar
+    $("sbLap").textContent = t.completedLaps != null ? "L" + t.completedLaps : "–";
+    $("sbPos").textContent = "P" + (t.position || "–");
+    $("sbTime").textContent = secToTime(t.sessionTimeLeft);
+    $("sbFuel").textContent = f1(t.fuel) + "L";
+    $("sbTrack").textContent = t.track || "–";
+
+    // === HOME TAB ===
+    // Lap times
+    $("lastLap").textContent = msToLap(t.iLastTime);
+    $("bestLap").textContent = msToLap(t.iBestTime);
+    $("estLap").textContent = msToLap(t.estimatedLapMs);
+
+    // Sectors
+    const ls = t.lastSectors || [];
+    const bs = t.bestSectors || [];
+    for (let i = 0; i < 3; i++) {
+      const el = $("s" + (i + 1));
+      const val = ls[i];
+      el.textContent = val > 0 ? (val / 1000).toFixed(3) : "–";
+      if (val > 0 && bs[i] > 0 && val <= bs[i]) el.style.color = "var(--purple)";
+      else if (val > 0) el.style.color = "var(--accent)";
+      else el.style.color = "var(--dim)";
+    }
+
+    // Fuel
+    $("fuel").innerHTML = f1(t.fuel) + '<span class="u">L</span>';
+    $("avgFuel").innerHTML = f1(s.avgFuelPerLap) + '<span class="u">L</span>';
     $("lapsInTank").textContent = f1(s.lapsInTank);
-    $("avgFuel").innerHTML = f1(s.avgFuelPerLap) + '<span class="u"> L</span>';
-    $("lapsLeft").textContent = s.lapsRemainingInSession == null ? "–" : Math.round(s.lapsRemainingInSession);
-    $("pos").textContent = t.position || "–";
-    $("fuel").innerHTML = f1(t.fuel) + '<span class="u"> L</span>';
-    // Prefill the fuel input with the engineer's suggested number once.
+    $("fuelToAdd").innerHTML = f1(s.fuelToAdd) + '<span class="u">L</span>';
+
+    // Vehicle settings
+    const el = t.electronics || {};
+    $("tc").textContent = el.tc != null ? el.tc : "–";
+    $("tccut").textContent = el.tcCut != null ? el.tcCut : "–";
+    $("abs").textContent = el.abs != null ? el.abs : "–";
+    $("bb").textContent = t.brakeBias ? f1(t.brakeBias) + "%" : (el.bb ? f1(el.bb) + "%" : "–");
+    $("map").textContent = el.map || "–";
+    $("mapBox").style.display = el.map ? "" : "none";
+
+    // Tyres & brakes
+    $("tyreCompound").textContent = t.tyreCompound || "–";
+    $("tyreAge").textContent = t.tyreSetLaps != null ? t.tyreSetLaps : "–";
+    const corners = ["FL", "FR", "RL", "RR"];
+    const tp = t.tyrePressure || [0,0,0,0];
+    const tt = t.tyreCoreTemp || [0,0,0,0];
+    const tw = t.tyreWear || [0,0,0,0];
+    const bt = t.brakeTemp || [0,0,0,0];
+    for (let i = 0; i < 4; i++) {
+      const c = corners[i];
+      $("p" + c).textContent = f1(tp[i]);
+      $("tp" + c).textContent = f0(tt[i]) + "°C";
+      $("w" + c).textContent = f1(tw[i]);
+      const wb = $("wb" + c);
+      wb.style.width = Math.max(tw[i], 0) + "%";
+      wb.style.background = wearColor(tw[i]);
+      $("b" + c).textContent = f0(bt[i]);
+    }
+
+    // Leaderboard
+    const body = $("lbBody");
+    const standings = t.standings || [];
+    if (standings.length) {
+      let html = "";
+      for (const s of standings) {
+        const cls = (s.isPlayer ? " player" : "") + (s.inPit ? " inpit" : "");
+        html += `<tr class="${cls}">
+          <td class="pos">${s.position}</td>
+          <td class="name">${esc(s.name)}</td>
+          <td class="gap time">${s.position === 1 ? "Leader" : "+" + (s.gapToLeaderMs / 1000).toFixed(1)}</td>
+          <td class="time">${s.intervalMs ? "+" + (s.intervalMs / 1000).toFixed(1) : "–"}</td>
+          <td class="time${s.lastLapMs && s.bestLapMs && s.lastLapMs <= s.bestLapMs ? " fast" : ""}">${msToLap(s.lastLapMs)}</td>
+          <td class="time fast">${msToLap(s.bestLapMs)}</td>
+          <td>${s.lapsCompleted}</td>
+          <td>${s.pitCount || 0}</td>
+        </tr>`;
+      }
+      body.innerHTML = html;
+    } else if (!body.children.length) {
+      body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--dim);padding:12px">Waiting for session data...</td></tr>';
+    }
+
+    // === WEATHER TAB ===
+    $("wxAir").innerHTML = f1(t.airTemp) + '<span class="u">°C</span>';
+    $("wxTrack").innerHTML = f1(t.roadTemp) + '<span class="u">°C</span>';
+    $("wxRain").textContent = rainText(t.rainIntensity);
+    $("wxWind").innerHTML = f1(t.windSpeedMs) + '<span class="u"> m/s</span>';
+    $("wxWindDir").style.transform = "rotate(" + (t.windDir || 0) + "deg)";
+    $("wxWindDeg").textContent = (t.windDir || 0) + "°";
+    $("wxGrip").textContent = gripText(t.trackGripStatus);
+    $("wxGrip").style.color = gripColor(t.trackGripStatus);
+
+    $("rainNow").textContent = rainText(t.rainIntensity);
+    $("rain10").textContent = rainText(t.rainIn10min);
+    $("rain30").textContent = rainText(t.rainIn30min);
+
+    // Forecast table
+    const fc = t.forecast || [];
+    if (fc.length) {
+      let fhtml = "";
+      for (const f of fc) {
+        const rainPct = Math.round((f.rain || 0) * 100);
+        const barW = Math.max(rainPct, 2);
+        fhtml += `<tr>
+          <td>+${f.minutes}m</td>
+          <td><span class="rain-bar${rainPct > 50 ? " rain-high" : ""}" style="width:${barW}px"></span> ${rainPct}%</td>
+          <td>${f1(f.airTemp)}°</td>
+          <td>${f1(f.trackTemp)}°</td>
+          <td>${f.grip != null ? f1(f.grip * 100) + "%" : "–"}</td>
+        </tr>`;
+      }
+      $("fcBody").innerHTML = fhtml;
+    }
+
+    // Rain radar canvas
+    drawRadar(fc);
+
+    // === PIT STRATEGY TAB ===
+    $("pitPosOut").textContent = estimatePitPosition(t);
+    $("pitLapsInTank").textContent = f1(s.lapsInTank);
+    $("pitLapsLeft").textContent = s.lapsRemainingInSession != null ? f0(s.lapsRemainingInSession) : "–";
+    $("pitCompound").textContent = t.tyreCompound || "–";
+    $("pitTyreAge").textContent = t.tyreSetLaps != null ? t.tyreSetLaps : "–";
+    $("pitFuelFinish").innerHTML = f1(s.fuelToFinish) + '<span class="u">L</span>';
+    $("pitFuelAdd").innerHTML = f1(s.fuelToAdd) + '<span class="u">L</span>';
+
+    for (let i = 0; i < 4; i++) {
+      const c = corners[i];
+      $("pitW" + c).innerHTML = f1(tw[i]) + '<span class="u">%</span>';
+      const wb = $("pitWb" + c);
+      wb.style.width = Math.max(tw[i], 0) + "%";
+      wb.style.background = wearColor(tw[i]);
+    }
+
+    // Prefill fuel input once
     if (!$("inFuel").dataset.touched && s.fuelToAdd != null)
       $("inFuel").value = Number(s.fuelToAdd).toFixed(1);
+
   } catch (e) {
-    $("conn").textContent = "offline"; $("conn").className = "no";
+    $("connDot").className = "conn-dot off";
+    $("conn").textContent = "offline";
   }
 }
+
+function drawRadar(fc) {
+  const c = $("radarCanvas");
+  const ctx = c.getContext("2d");
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (!fc.length) {
+    ctx.fillStyle = "#8b97a7";
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("No forecast data", W/2, H/2);
+    return;
+  }
+
+  const pad = {l:36, r:12, t:12, b:24};
+  const gw = W - pad.l - pad.r, gh = H - pad.t - pad.b;
+
+  // Grid lines
+  ctx.strokeStyle = "#222b3a";
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + gh * (1 - i/4);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = "#8b97a7"; ctx.font = "9px sans-serif"; ctx.textAlign = "right";
+    ctx.fillText((i * 25) + "%", pad.l - 4, y + 3);
+  }
+
+  // X labels
+  ctx.textAlign = "center"; ctx.fillStyle = "#8b97a7";
+  const maxMin = fc[fc.length-1].minutes || 60;
+  for (const f of fc) {
+    const x = pad.l + (f.minutes / maxMin) * gw;
+    ctx.fillText("+" + f.minutes + "m", x, H - 4);
+  }
+
+  // Rain area
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t + gh);
+  for (const f of fc) {
+    const x = pad.l + (f.minutes / maxMin) * gw;
+    const y = pad.t + gh * (1 - (f.rain || 0));
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(pad.l + gw, pad.t + gh);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + gh);
+  grad.addColorStop(0, "rgba(96,165,250,0.5)");
+  grad.addColorStop(1, "rgba(96,165,250,0.05)");
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Rain line
+  ctx.beginPath();
+  ctx.strokeStyle = "#60a5fa";
+  ctx.lineWidth = 2;
+  for (let i = 0; i < fc.length; i++) {
+    const x = pad.l + (fc[i].minutes / maxMin) * gw;
+    const y = pad.t + gh * (1 - (fc[i].rain || 0));
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Dots
+  for (const f of fc) {
+    const x = pad.l + (f.minutes / maxMin) * gw;
+    const y = pad.t + gh * (1 - (f.rain || 0));
+    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fillStyle = "#60a5fa"; ctx.fill();
+  }
+}
+
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+// Prefill touch flag
 $("inFuel").addEventListener("input", e => e.target.dataset.touched = "1");
 
+// Send pit command
 $("send").addEventListener("click", async () => {
+  const fuel = parseFloat($("inFuel").value);
   const cmd = {
-    fuelToAdd: parseFloat($("inFuel").value) || 0,
+    fuelToAdd: isNaN(fuel) ? 0 : fuel,
     changeTyres: $("inTyres").checked,
     tyreSet: parseInt($("inSet").value) || 1,
-    pressures: ["p0","p1","p2","p3"].map(id => parseFloat($(id).value) || 0),
+    pressures: [
+      parseFloat($("p0").value) || 0,
+      parseFloat($("p1").value) || 0,
+      parseFloat($("p2").value) || 0,
+      parseFloat($("p3").value) || 0,
+    ],
   };
-  $("ack").textContent = "sending…"; $("ack").className = "ack";
+  $("ack").textContent = "sending..."; $("ack").className = "ack";
   try {
     const r = await fetch("/strategy", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(cmd),
     });
+    if (!r.ok) {
+      $("ack").textContent = "✗ server error " + r.status; $("ack").className = "ack no";
+      return;
+    }
     const d = await r.json();
     $("ack").textContent = d.applied ? "✓ applied on the rig" : "✓ received (MFD automation off)";
     $("ack").className = "ack " + (d.applied ? "ok" : "no");
   } catch (e) {
-    $("ack").textContent = "✗ failed to reach the rig"; $("ack").className = "ack no";
+    $("ack").textContent = "✗ failed to reach the rig: " + e.message; $("ack").className = "ack no";
   }
 });
 
