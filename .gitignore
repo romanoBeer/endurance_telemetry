@@ -1,0 +1,8 @@
+# build output
+plugin/bin/
+plugin/obj/
+*.user
+
+# python (legacy, removed)
+.venv/
+__pycache__/

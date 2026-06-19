@@ -1,107 +1,132 @@
-# ACC Pitwall
+# Endurance Telemetry — SimHub plugin
 
-A **team** race-engineer system for Assetto Corsa Competizione, in the spirit of
-ACC DRIVE: live HUD, fuel/stint strategy, and **remote pitstop** control that an
-engineer or teammate can push at the driver from any device.
+A **team race-engineer pitwall**, rebuilt as a single [SimHub](https://www.simhubdash.com/)
+plugin. It reads SimHub's telemetry (so it works in **every sim SimHub supports** —
+ACC, iRacing, AC, rF2, …), computes the engineer numbers (rolling fuel/lap,
+laps-to-go, fuel-to-add), and:
 
-Built to your stack where it counts: **Python** agent + relay (proven by
-PyAccEngineer for exactly this), **React/TypeScript** web UI (one codebase that
-serves both a browser dashboard *and* a transparent in-game overlay).
+- surfaces everything as **SimHub properties** so you build the HUD / overlay /
+  leaderboard with native SimHub dashboards (no separate web app to host), and
+- hosts a tiny **HTTP control page** so a remote engineer (phone on the LAN) can
+  watch the strategy and **push a pit command** back to the rig, which applies it
+  to the ACC pit MFD.
 
 ```
-   ACC (rig, Windows)
-        │ shared memory + UDP broadcasting
-   ┌────▼─────┐  telemetry+strategy      ┌──────────────┐
-   │  AGENT   │ ───────WebSocket───────▶ │ RELAY SERVER │
-   │ (Python) │ ◀──── pit commands ───── │   (Python)   │
-   └──────────┘                          └──────┬───────┘
-                                    fan-out      │
-                       ┌─────────────────────────┼─────────────────────────┐
-                  ┌────▼────┐               ┌─────▼─────┐             ┌──────▼──────┐
-                  │ Browser │               │ Teammate  │             │  Overlay    │
-                  │dashboard│               │  / phone  │             │ (transparent│
-                  └─────────┘               └───────────┘             │  on the rig)│
-                                                                      └─────────────┘
+   Any sim ──▶ SimHub ──▶ Endurance Telemetry plugin
+                              │
+              ┌───────────────┼────────────────────────┐
+        SimHub dashboards   [Endurance Telemetry.*]   HTTP :8765
+        (HUD / overlay        properties            ┌──────────────┐
+         on the rig)                                │ phone control │
+                                                    │  page (LAN)   │
+                                                    └──────┬───────┘
+                                          POST /strategy   │
+                                          ──── pit MFD ◀────┘
 ```
 
-The agent reads telemetry and computes the engineer numbers; the relay fans them
-out to everyone in the room and routes pit commands back to the driver's agent,
-which (on a real rig) drives the pit MFD via keypresses. See `PROTOCOL.md` for
-the wire format.
+This replaces the previous Python agent + relay and the React UI — one plugin
+does the whole job. (Prior architecture is in git history if you need it.)
 
 ---
 
-## Run it now (no ACC needed)
+## Build & install
 
-Three terminals. The agent's simulator drives the whole pipeline so you can see
-it work before touching the game.
+Needs Windows, [SimHub](https://www.simhubdash.com/) installed, and either Visual
+Studio or the .NET Framework MSBuild.
 
-```bash
-# 1) Relay
-cd server && pip install -r requirements.txt
-uvicorn relay:app --host 0.0.0.0 --port 8765
-
-# 2) Agent (simulated stint)
-cd agent && pip install -r requirements.txt
-python agent.py --server ws://localhost:8765/ws --room team-spa-6h --name romanoBeer --sim
-
-# 3) Web dashboard
-cd web && npm install && npm run dev
-# open http://localhost:5173  → room "team-spa-6h", name "engineer"
+```powershell
+cd plugin
+msbuild EnduranceTelemetry.csproj /p:Configuration=Release
+# If SimHub isn't at the default path:
+#   msbuild ... /p:SimHubDir="D:\SimHub"
 ```
 
-You'll see live (fake) telemetry, and the **Pit Strategy** panel will push a
-command the agent receives and acks. Open the URL on your phone (same LAN) to see
-the teammate view; add `?overlay=1` for the slim overlay.
+The build drops `EnduranceTelemetry.dll` into the SimHub folder and copies
+`control.html` to `SimHub\PluginsData\EnduranceTelemetry\`. Launch SimHub and
+enable **Endurance Telemetry** when prompted (or in *Settings → Plugins*).
 
-On a real rig (Windows + ACC running), drop `--sim` and the agent reads live
-shared memory instead.
+> macOS/Linux: you can edit the source anywhere, but a SimHub plugin only builds
+> and runs on Windows against the SimHub assemblies.
 
 ---
+
+## Use it
+
+1. Start your sim; SimHub starts reading telemetry.
+2. Open SimHub → **Endurance Telemetry** in the left menu. Set the HTTP **port**
+   and driver name; tick *Apply pit commands* only once you've wired your binds.
+3. **Dashboards:** in the SimHub dashboard editor, bind controls to
+   `[Endurance Telemetry.Strategy.FuelToAdd]`, `[…Tyre.FL.Wear]`, `[…Rain.In30min]`,
+   etc. (full list below). Show them as a HUD or transparent overlay on the rig.
+4. **Engineer's phone:** browse to `http://<rig-LAN-ip>:<port>/`. Live strategy
+   numbers, and a form to push fuel / tyres / pressures / set to the driver.
+
+### LAN access (URL ACL)
+
+`HttpListener` needs a one-time URL reservation to accept connections from other
+devices. Run once, elevated (match the port):
+
+```powershell
+netsh http add urlacl url=http://+:8765/ user=Everyone
+```
+
+Without it the server falls back to localhost-only (phone won't connect, the
+rig's own browser still will).
+
+---
+
+## Exposed SimHub properties
+
+Bind from any dashboard as `[Endurance Telemetry.<name>]`:
+
+| Property | Meaning |
+|---|---|
+| `Strategy.FuelToAdd` | litres to add at the next stop |
+| `Strategy.FuelToFinish` | fuel needed to reach the flag (+0.5 L margin) |
+| `Strategy.AvgFuelPerLap` | rolling 5-lap burn |
+| `Strategy.LapsInTank` | laps the current fuel covers |
+| `Strategy.LapsRemaining` | laps left in the session |
+| `Strategy.HasData` | true once a lap has been measured |
+| `Fuel`, `MaxFuel`, `Position`, `CompletedLaps` | core race state |
+| `LastLapMs`, `BestLapMs`, `SessionTimeLeft`, `TrackPos` | timing |
+| `Tyre.{FL,FR,RL,RR}.{Pressure,CoreTemp,Wear}` | per-corner tyre data |
+| `Brake.{FL,FR,RL,RR}.Temp` | per-corner brake temp |
+| `Rain.{Now,In10min,In30min}`, `TrackGrip` | weather (ACC) |
+| `BrakeBias`, `TyreCompound`, `FieldCount`, `Game` | misc |
+
+ACC-only fields (tyre wear, electronics, rain forecast, pit MFD) come from the
+raw data object and degrade to defaults on other sims.
+
+## HTTP control API
+
+| Method | Path | Body / result |
+|---|---|---|
+| `GET` | `/` | the phone control page |
+| `GET` | `/telemetry` | `{ telemetry, strategy, driver }` (camelCase) |
+| `POST` | `/strategy` | `{ fuelToAdd, changeTyres, pressures[4], tyreSet }` → `{ applied }` |
+| `GET` | `/health` | `{ ok: true }` |
+
+## Pit-MFD application
+
+ACC has no API to set the pit MFD, so a real apply diffs the current MFD state
+against the request and walks it with keypresses — keybind-dependent, so it's left
+as a clearly marked TODO in [plugin/PitMfd.cs](plugin/PitMfd.cs). The `SendInput`
+scaffold and the enable flag are in place; wire the MFD walk to your binds, then
+tick *Apply pit commands* in settings. Until then, commands are acknowledged and
+logged but not actuated.
 
 ## Layout
 
 ```
-server/relay.py            FastAPI WebSocket hub: rooms, fan-out, command routing
-agent/
-  agent.py                 connects to relay, streams telemetry, applies pit cmds
-  sources.py               SimulatedSource + Windows SharedMemorySource
-  acc_shared_memory.py     ctypes structs for the 3 ACC pages + decoder
-  strategy.py              rolling fuel/lap, laps-to-go, fuel-to-add
-web/src/
-  useRelay.ts              WebSocket hook: presence + per-driver feeds + sendStrategy
-  Dashboard.tsx / Overlay.tsx
-  components/              HudBar, TyreWidget, BrakeWidget, FuelStrategy, StrategyPanel
-overlay-shell/             transparent always-on-top Tauri window (loads ?overlay=1)
-PROTOCOL.md                the wire contract
-```
-
----
-
-## Verified
-
-The Python spine was tested end-to-end (relay + agent-in-sim + a viewer client):
-telemetry fanned out driver→relay→viewer, a `set_strategy` command routed to the
-driver agent, was applied, and acked back. The web app typechecks (`tsc`) and
-builds (`vite build`) clean.
-
-## Things to finish before race day
-
-1. **Pit MFD application** (`agent/apply_strategy`) — the real-ACC keypress walk
-   of the pit MFD is stubbed. ACC has no API to set it directly; like
-   PyAccEngineer you diff current vs desired MFD state and emit keypresses
-   (wire in `pydirectinput` per your binds).
-2. **Shared-memory layout** — validate `acc_shared_memory.py` against your ACC
-   build, or `pip install pyaccsharedmemory` and swap its reader in (the agent
-   only needs a Snapshot dict, so the source is pluggable).
-3. **Hosting the relay** — for teammates outside your LAN, run `relay.py` on a
-   small VPS (it's stateless/in-memory). Put it behind TLS (`wss://`) and add a
-   room password check in the `join` handler.
-
-## Roadmap (Phase 2)
-
-- **UDP broadcasting client** in the agent → live timing + the full grid, not
-  just your own car. Unlocks proper standings and the early yellow-flag predictor.
-- **Stint history / export** — log laps + fuel per driver for post-race review.
-- **Driver-swap aware strategy** — per-driver fuel models across a stint.
+plugin/
+  EnduranceTelemetry.csproj      net48 plugin, references SimHub assemblies
+  EnduranceTelemetryPlugin.cs    IDataPlugin: lifecycle + property surface
+  TelemetryMapper.cs             SimHub GameData (+ACC raw) -> Telemetry
+  StrategyEngine.cs              rolling fuel/lap, laps-to-go, fuel-to-add
+  Models.cs                      Telemetry / Strategy / Standing / PitCommand
+  CommandServer.cs               in-process HTTP: control page + command channel
+  PitMfd.cs                      ACC pit-MFD keypress application (scaffold)
+  SettingsControl.cs             SimHub settings panel
+  PluginSettings.cs              persisted settings
+  web/control.html               engineer's phone page (plain HTML/JS)
 ```

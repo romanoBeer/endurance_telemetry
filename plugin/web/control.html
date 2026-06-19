@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Endurance Pitwall — Engineer</title>
+<style>
+  :root { --bg:#0b0e14; --panel:#141925; --line:#222b3a; --txt:#e6edf3; --dim:#8b97a7; --accent:#3ddc97; --warn:#ffb74d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.4 -apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--txt); }
+  header { padding:14px 16px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+  header b { font-size:16px; } header span { color:var(--dim); font-size:12px; }
+  .wrap { padding:16px; max-width:520px; margin:0 auto; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .card .k { color:var(--dim); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .card .v { font-size:26px; font-weight:600; margin-top:2px; }
+  .card .u { color:var(--dim); font-size:13px; font-weight:400; }
+  h2 { font-size:13px; color:var(--dim); text-transform:uppercase; letter-spacing:.05em; margin:22px 0 10px; }
+  label { display:flex; justify-content:space-between; align-items:center; margin:10px 0; gap:12px; }
+  input[type=number] { width:100px; background:#0d1119; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:8px; font-size:15px; text-align:right; }
+  .row4 { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .row4 input { width:100%; }
+  .toggle { display:flex; align-items:center; gap:8px; }
+  button { width:100%; margin-top:16px; padding:14px; border:0; border-radius:12px; background:var(--accent); color:#06281c; font-size:16px; font-weight:700; }
+  button:active { filter:brightness(.9); }
+  .ack { text-align:center; margin-top:12px; min-height:18px; font-size:14px; }
+  .ok { color:var(--accent); } .no { color:var(--warn); }
+  .off { opacity:.4; }
+</style>
+</head>
+<body>
+<header><b>Endurance Pitwall</b><span id="conn">connecting…</span></header>
+<div class="wrap">
+  <div class="grid">
+    <div class="card"><div class="k">Fuel to add</div><div class="v" id="fuelToAdd">–<span class="u"> L</span></div></div>
+    <div class="card"><div class="k">Laps in tank</div><div class="v" id="lapsInTank">–</div></div>
+    <div class="card"><div class="k">Avg fuel/lap</div><div class="v" id="avgFuel">–<span class="u"> L</span></div></div>
+    <div class="card"><div class="k">Laps left</div><div class="v" id="lapsLeft">–</div></div>
+    <div class="card"><div class="k">Position</div><div class="v" id="pos">–</div></div>
+    <div class="card"><div class="k">Fuel</div><div class="v" id="fuel">–<span class="u"> L</span></div></div>
+  </div>
+
+  <h2>Push pit strategy</h2>
+  <label>Fuel to add (L)
+    <input type="number" id="inFuel" step="0.5" min="0" value="0" />
+  </label>
+  <label>Change tyres
+    <span class="toggle"><input type="checkbox" id="inTyres" checked /></span>
+  </label>
+  <label>Tyre set
+    <input type="number" id="inSet" step="1" min="1" value="1" />
+  </label>
+  <div>Pressures (FL FR RL RR, psi)</div>
+  <div class="row4">
+    <input type="number" id="p0" step="0.1" value="27.4" />
+    <input type="number" id="p1" step="0.1" value="27.4" />
+    <input type="number" id="p2" step="0.1" value="27.1" />
+    <input type="number" id="p3" step="0.1" value="27.1" />
+  </div>
+  <button id="send">Send to driver</button>
+  <div class="ack" id="ack"></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const f1 = n => (n == null ? "–" : Number(n).toFixed(1));
+
+async function poll() {
+  try {
+    const r = await fetch("/telemetry", { cache: "no-store" });
+    const d = await r.json();
+    const t = d.telemetry || {}, s = d.strategy || {};
+    $("conn").textContent = t.connected ? (t.game || "live") : "no telemetry";
+    $("conn").className = t.connected ? "ok" : "no";
+    $("fuelToAdd").innerHTML = f1(s.fuelToAdd) + '<span class="u"> L</span>';
+    $("lapsInTank").textContent = f1(s.lapsInTank);
+    $("avgFuel").innerHTML = f1(s.avgFuelPerLap) + '<span class="u"> L</span>';
+    $("lapsLeft").textContent = s.lapsRemainingInSession == null ? "–" : Math.round(s.lapsRemainingInSession);
+    $("pos").textContent = t.position || "–";
+    $("fuel").innerHTML = f1(t.fuel) + '<span class="u"> L</span>';
+    // Prefill the fuel input with the engineer's suggested number once.
+    if (!$("inFuel").dataset.touched && s.fuelToAdd != null)
+      $("inFuel").value = Number(s.fuelToAdd).toFixed(1);
+  } catch (e) {
+    $("conn").textContent = "offline"; $("conn").className = "no";
+  }
+}
+$("inFuel").addEventListener("input", e => e.target.dataset.touched = "1");
+
+$("send").addEventListener("click", async () => {
+  const cmd = {
+    fuelToAdd: parseFloat($("inFuel").value) || 0,
+    changeTyres: $("inTyres").checked,
+    tyreSet: parseInt($("inSet").value) || 1,
+    pressures: ["p0","p1","p2","p3"].map(id => parseFloat($(id).value) || 0),
+  };
+  $("ack").textContent = "sending…"; $("ack").className = "ack";
+  try {
+    const r = await fetch("/strategy", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cmd),
+    });
+    const d = await r.json();
+    $("ack").textContent = d.applied ? "✓ applied on the rig" : "✓ received (MFD automation off)";
+    $("ack").className = "ack " + (d.applied ? "ok" : "no");
+  } catch (e) {
+    $("ack").textContent = "✗ failed to reach the rig"; $("ack").className = "ack no";
+  }
+});
+
+poll();
+setInterval(poll, 1000);
+</script>
+</body>
+</html>
